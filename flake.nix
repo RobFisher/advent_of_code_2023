@@ -1,5 +1,5 @@
 {
-  description = "Syndication Tools";
+  description = "Advent of Code 2023";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -17,7 +17,7 @@
         with pkgs;
         {
           devShells.default = mkShell {
-            name = "synd-tools";
+            name = "advent2023";
             packages = [
               rustc
               cargo
