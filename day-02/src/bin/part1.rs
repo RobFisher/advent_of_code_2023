@@ -3,20 +3,28 @@ use std::str::FromStr;
 
 fn main() {
     let input = include_str!("../input.txt");
-    let output = part1(input);
+    let output = parts(input);
     dbg!(output);
 }
 
 
-fn part1(input: &str) -> String {
+#[derive(Debug, PartialEq, Eq)]
+struct DayTwoResult {
+    part_one_result: u32,
+    part_two_result: u32,
+}
+
+
+fn parts(input: &str) -> DayTwoResult {
     let bag = CubeSet{red: 12, green: 13, blue: 14};
-    let mut total = 0u32;
+    let mut result = DayTwoResult{part_one_result: 0, part_two_result: 0};
     for line in input.lines() {
         if let Ok(game) = Game::from_str(line) {
-            total += game.game_result(&bag);
+            result.part_one_result += game.game_result(&bag);
+            result.part_two_result += game.minimum_cube_set().power();
         }
     }
-    total.to_string()
+    result
 }
 
 
@@ -33,6 +41,10 @@ impl CubeSet {
         other.red >= self.red &&
         other.green >= self.green &&
         other.blue >= self.blue
+    }
+
+    fn power(&self) -> u32 {
+        self.red * self.green * self.blue
     }
 }
 
@@ -112,6 +124,22 @@ impl Game {
         }
         result
     }
+
+    fn minimum_cube_set(&self) -> CubeSet {
+        let mut m = CubeSet {red: 0, green: 0, blue: 0};
+        for selection in self.selections.iter() {
+            if selection.red > m.red {
+                m.red = selection.red;
+            }
+            if selection.green > m.green {
+                m.green = selection.green;
+            }
+            if selection.blue > m.blue {
+                m.blue = selection.blue;
+            }
+        }
+        m
+    }
 }
 
 
@@ -120,13 +148,13 @@ mod tests {
     use super::*;
     #[test]
     fn it_works() {
-        let result = part1(
+        let result = parts(
 "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
 Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
 Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
 Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
 Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green"
         );
-        assert_eq!(result, "8".to_string());
+        assert_eq!(result, DayTwoResult{part_one_result: 8, part_two_result: 2286});
     }
 }
