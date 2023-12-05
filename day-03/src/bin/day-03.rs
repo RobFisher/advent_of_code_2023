@@ -3,8 +3,11 @@ use std::str::FromStr;
 
 fn main() {
     let input = include_str!("../input.txt");
-    let output = part1(input);
-    dbg!(output);
+    let map = Map2D::from_str(input).expect("Unable to parse map.");
+    let part1_result = map.get_part_number_total();
+    let part2_result = map.get_gear_ratio_total();
+    println!("Part 1: {}", part1_result);
+    println!("Part 2: {}", part2_result);
 }
 
 
@@ -47,6 +50,10 @@ impl Map2D {
     fn is_symbol(&self, x: usize, y: usize) -> bool {
         let c = self.get_coordinate(x, y);
         c != '.' && !c.is_numeric()
+    }
+
+    fn is_numeric(&self, x: usize, y: usize) -> bool {
+        self.get_coordinate(x, y).is_numeric()
     }
 
     fn symbol_adjacent_to(&self, x: usize, y: usize) -> bool {
@@ -93,12 +100,89 @@ impl Map2D {
         (0..self.map_2d.len()).map(|y| self.get_part_number_total_in_row(y))
                               .sum()
     }
-}
 
+    fn get_number_at_location(&self, x: usize, y: usize) -> u32 {
+        // search left to find the start of the number
+        let mut x_cursor = x;
+        let mut result = 0u32;
+        while x_cursor > 0 && self.is_numeric(x_cursor-1, y) {
+            x_cursor -= 1;
+        }
+        // scan the number
+        while let Some(n) = self.get_coordinate(x_cursor, y).to_digit(10) {
+            result *= 10;
+            result += n;
+            x_cursor += 1;
+        }
+        result
+    }
 
-fn part1(input: &str) -> u32 {
-    let map = Map2D::from_str(input).expect("Unable to parse map.");
-    map.get_part_number_total()
+    fn gear_ratio_at_location(&self, x: usize, y: usize) -> u32 {
+        // the two numbers are either above, below, to the left or to the right
+        let mut adjacent_numbers: Vec<u32> = Vec::new();
+
+        if y > 0 {
+            // look above
+            if self.is_numeric(x, y-1) {
+                adjacent_numbers.push(self.get_number_at_location(x, y-1));
+            } else {
+                // if there is no number directly above, there could be one both
+                // up-left and up-right
+                if x > 0 && self.is_numeric(x-1, y-1) {
+                    adjacent_numbers.push(self.get_number_at_location(x-1, y-1));
+                }
+                if self.is_numeric(x+1, y-1) {
+                    adjacent_numbers.push(self.get_number_at_location(x+1, y-1));
+                }
+            }
+        }
+        // look below
+        if self.is_numeric(x, y+1) {
+            adjacent_numbers.push(self.get_number_at_location(x, y+1));
+        } else {
+            // if there is no number directly below, there could be one both
+            // down-left and down-right
+            if x > 0 && self.is_numeric(x-1, y+1) {
+                adjacent_numbers.push(self.get_number_at_location(x-1, y+1));
+            }
+            if self.is_numeric(x+1, y+1) {
+                adjacent_numbers.push(self.get_number_at_location(x+1, y+1));
+            }
+        }
+
+        // look left
+        if x > 0 && self.is_numeric(x-1, y) {
+            adjacent_numbers.push(self.get_number_at_location(x-1, y));
+        }
+        // look right
+        if self.is_numeric(x+1, y) {
+            adjacent_numbers.push(self.get_number_at_location(x+1, y));
+        }
+        // only valid if there are exactly two numbers
+        dbg!(&adjacent_numbers);
+        if adjacent_numbers.len() == 2 {
+            adjacent_numbers.into_iter().product()
+        } else {
+            0
+        }
+    }
+
+    fn get_gear_ratio_total_in_row(&self, y: usize) -> u32 {
+        let mut result = 0u32;
+        if let Some(row) = self.map_2d.get(y) {
+            for (x, c) in row.iter().enumerate() {
+                if *c == '*' {
+                    result += self.gear_ratio_at_location(x, y);
+                }
+            }
+        }
+        result
+    }
+
+    fn get_gear_ratio_total(&self) -> u32 {
+        (0..self.map_2d.len()).map(|y| self.get_gear_ratio_total_in_row(y))
+                              .sum()
+    }
 }
 
 
@@ -107,7 +191,7 @@ mod tests {
     use super::*;
     #[test]
     fn it_works() {
-        let result = part1(
+        let input =
 "467..114..
 ...*......
 ..35..633.
@@ -117,9 +201,26 @@ mod tests {
 ..592.....
 ......755.
 ...$.*....
-.664.598.."
-        );
-        assert_eq!(result, 4361);
+.664.598..";
+        let map = Map2D::from_str(input).expect("invalid input");
+        assert_eq!(map.get_part_number_total(), 4361);
+        assert_eq!(map.get_gear_ratio_total(), 467835);
+
+        let input2 =
+"12.......*..
++.........34
+.......-12..
+..78........
+..*....60...
+78.........9
+.5.....23..$
+8...90*12...
+............
+2.2......12.
+.*.........*
+1.1..503+.56";
+        let map2 = Map2D::from_str(input2).expect("invalid input");
+        assert_eq!(map2.get_gear_ratio_total(), 6756);
     }
 }
 
